@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import get_data
+import get_data,data_clean
 from utils.common import read_yaml,create_directories
 from application_logger.logging import App_Logger
 
@@ -19,6 +19,14 @@ def main():
     data =  get_data.data_downloader(school_id,local_dir)
     data = data.download()
     log.log(log_message=f"Data getting completed...")
+
+    log.log("Instantiating claning of the data...")
+    data_cleaned = data_clean.clean_data(data)
+    data_cleaned = data_cleaned.remove_tags(drop_null=True)
+    PATH = os.path.join(local_dir,"cleaned_data.csv")
+    if not os.path.exists(PATH):
+        data_cleaned.to_csv(PATH)
+    log.log(f"Data cleaning completed...")
 
 main()
 
