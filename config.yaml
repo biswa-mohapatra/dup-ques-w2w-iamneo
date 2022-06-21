@@ -1,0 +1,5 @@
+GET_DATA: 
+  school_id : "69d62be1-d6bb-4216-b8bf-4372b36f4942"
+  local_dir : "data"
+  data_file_name : "Raw_data.csv"
+  auth_json_path : "examly-events-26d60ca289a0.json"
