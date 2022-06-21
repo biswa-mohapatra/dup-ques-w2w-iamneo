@@ -26,6 +26,7 @@ class data_downloader(object):
         self.file_obj = open("get_data.txt","a+")
         self.logger = logging.App_Logger(self.file_obj)
         self.config = read_yaml("config.yaml")
+        self.file_name = self.config["GET_DATA"]["data_file_name"]
         self.auth_json_path = self.config["GET_DATA"]["auth_json_path"] 
 
     def download(self):
@@ -37,6 +38,8 @@ class data_downloader(object):
 
         Author: Biswajit Mohapatra
 
+        Version: 1.0
+
         """
         try:
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.expanduser(self.auth_json_path)
@@ -47,19 +50,20 @@ class data_downloader(object):
             FROM `examly-events.schema_testing_views.questions_dup_view`
             WHERE school_id = "{self.school_id}"
             """
-            if not os.path.isfile(self.file_path):
+            if not os.path.exists(self.file_path):
                 self.logger.log(f"File doesn't exist of school id : {self.school_id}\n")
                 data = pandas_gbq.read_gbq(query, use_bqstorage_api=True,dialect="standard")
                 file_path = os.path.join(self.file_path,self.school_id)
-                data.to_csv(file_path)
+                data.to_csv(file_path + self.file_name)
                 self.logger.log(f"Data downloaded and saved at {file_path}...\n")
                 return data
             else:
                 self.logger.log(f"File already exist with school id {self.school_id}...\n")
-                data = pd.read_csv(self.file_path)
+                file_path = os.path.join(self.file_path,self.school_id)
+                data = pd.read_csv(file_path + self.file_name)
                 return data
         except Exception as e:
-            self.logger.log(f"Something went wrong...{e}\n")
+            self.logger.log(f"Something went wrong in get_data method...{e}\n")
             raise e
 
     
