@@ -2,6 +2,7 @@ import os
 import yaml
 import logging
 import time
+import shutil
 import pandas as pd
 import json
 
@@ -17,3 +18,6 @@ def create_directories(path_to_directories: list) -> None:
 def save_json(path: str, data: dict) -> None:
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
+
+def delete_directory(path: str) -> None:
+    shutil.rmtree(path)
