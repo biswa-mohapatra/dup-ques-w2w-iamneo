@@ -36,8 +36,11 @@ class clean_data(object):
             data = self.data.drop(columns_to_drop,axis=1)
             self.log.log(f"Successfully dropped columns :: {columns_to_drop}")
             return data
+        except KeyError as k:
+            self.log.log(f"Something went wrong in cols_to_drop method :: {k}\n")
+            raise KeyError
         except Exception as e:
-            self.log.log(f"Something went wrong in cols_to_drop method, during dropping columns :: {columns_to_drop}\n \t ERROR :: {e}")
+            self.log.log(f"Something went wrong in cols_to_drop method, during dropping columns :: {columns_to_drop}\n \t ERROR :: {e}\n")
             raise e
 
     def remove_tags(self,drop_null:bool):
@@ -53,18 +56,24 @@ class clean_data(object):
         """
         try:
             if not os.path.exists("data\cleaned_data.csv"):
-                self.log.log(f"Cleaning of tags from the data started....")
+                self.log.log(f"Cleaning of tags from the data started....\n")
                 self.data = self.data.replace(r"<p></p>",np.NaN,regex=True)
                 if drop_null:
                     self.data = self.data[::1].dropna()
 
                 # Removing the html tags:
                 self.data["cleaned_ques_data"] = self.data["question_data"].str.replace(r'<[^<>]*>','',regex=True)
-                self.log.log(f"Cleaning of tags from the data completed....")
+                self.log.log(f"Cleaning of tags from the data completed....\n")
+                self.data = self.data.drop(index=list(np.where(self.data["clean_question_data"] == "nan")[0]))
+                self.log.log(f"NaN values wrere removed successfully....\n")
                 return self.data
+        except KeyError as k:
+            self.log.log(f"Something went wrong in remove_tags method... :: {k}\n")
+            raise KeyError
         except Exception as e:
-            self.log.log(f"Something went wrong in remove_tags method :: {e}")
+            self.log.log(f"Something went wrong in remove_tags method :: {e}\n")
             raise e
+
 
 
         
