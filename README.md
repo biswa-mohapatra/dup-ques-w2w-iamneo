@@ -2,7 +2,7 @@
 To find similarity between texts.
 
 
-# DL
+# Word-toWord similarity
 
 ## Commands using -
 
@@ -26,12 +26,12 @@ To find similarity between texts.
     conda activate ./env
 --------------------
 
+### To create requirements.txt
+--------------------
+    pip3 freeze > requirements.txt
+--------------------
+
 ### To install requirements
 --------------------
     pip install -r requirements.txt 
---------------------
-
-### Reserch enviroment
---------------------
-    mkdir Reserch_env
 --------------------
