@@ -73,13 +73,15 @@ def main():
             if scentence:
                 print(scentence)
                 log.log(f"Finding duplicate index started...\n")
-                dup = duplicate_index.duplicate_index(filtered_data,str(scentence))
-                dup = dup.index()
-                print(len(dup))
-                if len(dup)>1:
-                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup)-1} \n school_id :: {school_id}")
+                dup = duplicate_index.duplicate_index(cleaned_nan_data=data_cleaned,filtered_data=filtered_data,question=str(scentence))
+                dup_list = dup.index()
+                print(len(dup_list))
+                if len(dup_list)>1:
+                    dup.details()
+                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup_list)-1} \n school_id :: {school_id}")
                 else:
-                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup)} \n school_id :: {school_id}")
+                    dup.details()
+                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup_list)} \n school_id :: {school_id}")
 
 
         except KeyError as k:
@@ -97,6 +99,18 @@ def main():
 
     else:
         return render_template('home.html',prediction_output = "No values were added...")
+
+@app.route("/details", methods=["GET", "POST"])
+@cross_origin()
+def details():
+    if request.method == "POST":
+        path = "templates/details.html"
+        if os.path.exists(path):
+            return render_template('details.html')
+        else:
+            return render_template('home.html')
+    else:
+        return render_template('home.html')
 
 if __name__ == "__main__":
     #result = main("What is your name?")
