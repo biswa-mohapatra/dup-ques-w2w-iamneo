@@ -11,7 +11,7 @@ class clean_data(object):
 
     Params: data -> DataFrame
 
-    Author: Biswajit Mohapatra
+    Author: Biswajit Mohapatra, Swati Kahar
 
     Version: 1.0 
     """
@@ -27,7 +27,7 @@ class clean_data(object):
 
         Params: Columns -> list
 
-        Author: Biswajit Mahapatra
+        Author: Biswajit Mahapatra, Swati Kahar
 
         Version: 1.0 
         """
@@ -50,7 +50,7 @@ class clean_data(object):
 
         Params: Columns -> list
 
-        Author: Biswajit Mahapatra
+        Author: Biswajit Mahapatra, Swati Kahar
 
         Version: 1.0
         """
