@@ -18,7 +18,7 @@ class data_downloader(object):
 
     Params: school id, destination path 
 
-    Author: Biswajit Mohapatra
+    Author: Biswajit Mohapatra, Swati Kahar
     """
     def __init__(self,school_id:str,file_destination_path:str):
         self.school_id = school_id
@@ -36,7 +36,7 @@ class data_downloader(object):
 
         Params: None
 
-        Author: Biswajit Mohapatra
+        Author: Biswajit Mohapatra, Swati Kahar
 
         Version: 1.0
 

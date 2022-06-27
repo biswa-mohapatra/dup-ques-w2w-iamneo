@@ -9,7 +9,7 @@ class filter(object):
 
     Params: Transformed data
 
-    Author: Biswajit Mohapatra
+    Author: Biswajit Mohapatra, Swati Kahar
 
     Version: 1.0
     """
@@ -23,7 +23,7 @@ class filter(object):
         This function is resposible for filtering the duplicates
         in the given data.
 
-        Author: Biswajit Mohapatra
+        Author: Biswajit Mohapatra, Swati Kahar
         """
 
         try:

@@ -9,7 +9,7 @@ class transform(object):
 
     Params: Cleaned data 
 
-    Author: Biswajit Mohapatra
+    Author: Biswajit Mohapatra, Swati Kahar
 
     Version: 1.0  
     """
@@ -24,7 +24,7 @@ class transform(object):
         To tranform the given data to lower case and
         remove the unwanted spaces.
 
-        Author: Biswajit Mahapatra
+        Author: Biswajit Mahapatra, Swati Kahar
         """
         try:
             self.log.log(f"Transforming the data started...")

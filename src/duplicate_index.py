@@ -13,7 +13,7 @@ class duplicate_index(object):
     Params: Filtered duplicated questions -> DataFrame, 
             question that needed to be checked for duplicate -> string
     
-    Author: Biswajit Mohapatra
+    Author: Biswajit Mohapatra, Swati Kahar
 
     Version: 1.0
     """
@@ -32,7 +32,7 @@ class duplicate_index(object):
 
         Params: NONE
 
-        Author: Biswajit Mohapatra
+        Author: Biswajit Mohapatra, Swati Kahar
 
         Version: 1.0
         """
@@ -51,7 +51,7 @@ class duplicate_index(object):
         This method is responsible for giving a list of questions 
         that are duplicated.
 
-        Author: Biswajit Mohapatra
+        Author: Biswajit Mohapatra, Swati Kahar
 
         Version: 1.0
         """
