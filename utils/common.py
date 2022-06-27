@@ -19,5 +19,5 @@ def save_json(path: str, data: dict) -> None:
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
 
-def delete_directory(path: str) -> None:
-    shutil.rmtree(path)
+def delete_file(path: str) -> None:
+    os.remove(path)
