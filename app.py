@@ -14,16 +14,26 @@ log = App_Logger(file_obj)
 @app.route("/")
 @cross_origin()
 def home():
+    """
+    This function is responsible for rendering the home page.
+    """
     return render_template("home.html")
 
 @app.route("/duplicate", methods = ["GET", "POST"])
 @cross_origin()
 def main():
+    """
+    This function is responsible for rendering the number of duplicate
+    along with schoolID.
+
+    Condition: The question that needed to be checked should be provided
+    else the home page will be rendered by default.
+    """
     if request.method == "POST":
         try:
-            print("Entered main function...")
+            #print("Entered main function...")
             scentence = request.form.get("Question")
-            print(scentence)
+            #print(scentence)
             config = read_yaml("config.yaml")
             school_id = config["GET_DATA"]["school_id"]
             local_dir = config["GET_DATA"]["local_dir"]
@@ -71,11 +81,11 @@ def main():
 
 
             if scentence:
-                print(scentence)
+                #print(scentence)
                 log.log(f"Finding duplicate index started...\n")
                 dup = duplicate_index.duplicate_index(cleaned_nan_data=data_cleaned,filtered_data=filtered_data,question=str(scentence))
                 dup_list = dup.index()
-                print(len(dup_list))
+                #print(len(dup_list))
                 if len(dup_list)>1:
                     dup.details()
                     return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup_list)-1} \n school_id :: {school_id}")
@@ -103,17 +113,25 @@ def main():
 @app.route("/details", methods=["GET", "POST"])
 @cross_origin()
 def details():
+    """
+    This function is responsible for rendering the details of duplicate
+    question on a different page.
+
+    Condition: The file must be present before rendering
+    else the home page will only be rendered. 
+    """
     if request.method == "POST":
+        log.log(f"Request method recived for details api...")
         path = "templates/details.html"
         if os.path.exists(path):
+            log.log(f"File exists, hence rendering..")
             return render_template('details.html')
         else:
+            log.log(f"File does not exist, hence rendering home page...")
             return render_template('home.html')
     else:
+        log.log(f"Request method not recived, hence rendering home.html")
         return render_template('home.html')
 
 if __name__ == "__main__":
-    #result = main("What is your name?")
-    #print(result)
-    #main()
     app.run(debug=True)
