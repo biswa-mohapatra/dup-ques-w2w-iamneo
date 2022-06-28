@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from pretty_html_table import build_table
 from utils.common import delete_file
 from application_logger import logging
 
@@ -67,7 +68,9 @@ class duplicate_index(object):
             if not os.path.exists(path):
                 self.log.log(f"{file_name} isn't present so saving it...")
                 os.chdir(template)
-                data.to_html(file_name)
+                html_table = build_table(data, 'blue_light')
+                with open(file_name, 'w',encoding="utf-8") as f:
+                    f.write(html_table)
                 os.chdir(original_path)
                 self.log.log(f"{file_name} saved successfully at {path}")
             else:
@@ -76,7 +79,9 @@ class duplicate_index(object):
                 self.log.log(f"creating new file at {path}...")
                 os.chdir(template)
                 delete_file(file_name)
-                data.to_html(file_name)
+                html_table = build_table(data, 'blue_light')
+                with open(file_name, 'w',encoding="utf-8") as f:
+                    f.write(html_table)
                 os.chdir(original_path)
                 self.log.log(f"New file created successfully at {path}")
             return 
