@@ -1,4 +1,5 @@
 GET_DATA: 
+  query : '''SELECT *,select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name FROM `examly-events.schema_testing_views.questions_dup_view` dup LIMIT 10000'''
   school_id : "69d62be1-d6bb-4216-b8bf-4372b36f4942"
   local_dir : "data"
   data_file_name : "Raw_data.csv"
