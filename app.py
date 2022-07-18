@@ -3,8 +3,10 @@ import pandas as pd
 from flask import Flask, request, render_template
 from flask_cors import cross_origin
 from sqlalchemy import null
-from src import get_data,data_clean,transform_data,filter_duplicate,duplicate_index
-from utils.common import read_yaml,create_directories
+from pretty_html_table import build_table
+from src.question_duplicate_package import duplicate_v1
+from src import data_prep 
+from src.utils.common import read_yaml,create_directories,delete_file
 from application_logger.logging import App_Logger
 
 app = Flask(__name__)
@@ -31,67 +33,84 @@ def main():
     """
     if request.method == "POST":
         try:
-            #print("Entered main function...")
+            print("Entered main function...")
             scentence = request.form.get("Question")
-            #print(scentence)
+            print(scentence)
             config = read_yaml("config.yaml")
             school_id = config["GET_DATA"]["school_id"]
             local_dir = config["GET_DATA"]["local_dir"]
-            
+            query = config["GET_DATA"]["query"]
+            auth_path = config["GET_DATA"]["auth_json_path"]
+            duplicate = duplicate_v1(auth_path)
             
             if not os.path.exists(local_dir):
                 log.log(log_message=f"creating data directory...")
                 create_directories([local_dir])
-            
-            log.log(log_message=f"Getting the data...")
-            data =  get_data.data_downloader(school_id,local_dir)
-            data = data.download()
-            log.log(log_message=f"Data getting completed...")
+            log.log(f"Connecting to the Big Query...")
+            duplicate.connect_bigquerry() # Connecting to Big Query
+            log.log(f"Connected to the Big Query...")
+            log.log(f"Getting the data...")
+            data =  duplicate.fetch_data(query=query) # Downloading the data from Big Query
+            log.log(f"Data getting completed...")
 
-            PATH = os.path.join(local_dir,f"cleaned_data{school_id}.csv")
-            if not os.path.exists(PATH):
-                log.log("Instantiating claning of the data...")
-                data_cleaned = data_clean.clean_data(data)
-                data_cleaned = data_cleaned.remove_tags(drop_null=True,PATH=PATH)
-                data_cleaned.to_csv(PATH)
-                log.log(f"Data cleaning completed...")
-            else:
-                data_cleaned = pd.read_csv(PATH)
-            transform_data_PATH = os.path.join(local_dir,f"transformed_data{school_id}.csv")
-            if not os.path.exists(transform_data_PATH):
-                log.log(f"Starting Data Transformation \n")
-                t = transform_data.transform(data_cleaned)
-                transformed_data = t.transform_data()
-                log.log(f"Data transformation completed...\n")
-                transformed_data.to_csv(transform_data_PATH)
-                log.log(f"Transformed data saved at {transform_data_PATH}")
-            else:
-                transformed_data = pd.read_csv(transform_data_PATH)
+            # Preparing the data:
+            prepared_data = data_prep.prepare_data(data)
+        
+        # Cleaning the data:
+            log.log("Instantiating claning of the data...")
+            data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
+            column_name = "clean_question_data"
+            data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
+            log.log(f"Data cleaning completed...")
 
-            filtered_data_PATH = os.path.join(local_dir,f"filtered_data{school_id}.csv")
-            if not os.path.exists(filtered_data_PATH):
-                log.log(f"Starting Data Filteration \n")
-                f = filter_duplicate.filter(transformed_data)
-                filtered_data = f.filter_duplicates()
-                log.log(f"Data filteration completed...\n")
-                filtered_data.to_csv(filtered_data_PATH)
-                log.log(f"Data filteration completed and filtered data saved at {filtered_data_PATH}...\n")
-            else:
-                filtered_data = pd.read_csv(filtered_data_PATH)
+            #inserting column to the data:
+            col_name = "cleaned_mcq_questions_options"
+            duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
+            log.log(f"{col_name} successfully added.")
+        
+            # transforming the cleaned data
+            transformed_data = duplicate.transform_data(data_cleaned_nan)
 
-
+            log.log(f"Starting Data Filteration \n")
+            # Filtering out the data whose duplicates exists:
+            filtered_data = duplicate.filter_duplicate(transformed_data)
+            log.log(f"Data filteration completed...\n")
+            scentence = data_cleaned_nan["clean_question_data"].iloc[100]
             if scentence:
-                #print(scentence)
+                print(scentence)
                 log.log(f"Finding duplicate index started...\n")
-                dup = duplicate_index.duplicate_index(cleaned_nan_data=data_cleaned,filtered_data=filtered_data,question=str(scentence))
-                dup_list = dup.index()
-                #print(len(dup_list))
-                if len(dup_list)>1:
-                    dup.details()
-                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup_list)-1} \n school_id :: {school_id}")
+                idx = duplicate.find_dup_idx(filtered_data,scentence)
+                print(len(idx))
+                if len(idx)>1:
+                    dup = duplicate.variations(filtered_data=filtered_data,idx=idx)
+                    template = "templates"
+                    file_name = "details.html"
+                    new_data = duplicate.fetch_duplicate_data(dup)
+                    original_path = os.getcwd()
+                    path = os.path.join(template, file_name)
+                    if not os.path.exists(path):
+                        log.log(f"{file_name} isn't present so saving it...")
+                        os.chdir(template)
+                        final_data = duplicate.fetch_duplicate_data(dup)
+                        html_table = build_table(new_data, 'blue_light')
+                        with open(file_name, 'w',encoding="utf-8") as f:
+                            f.write(html_table)
+                        os.chdir(original_path)
+                        log.log(f"{file_name} saved successfully at {path}")
+                    else:
+                        log.log(f"{file_name} already exists so deleting it...")
+                        print(f"deleing dir {path}")
+                        log.log(f"creating new file at {path}...")
+                        os.chdir(template)
+                        delete_file(file_name)
+                        html_table = build_table(new_data, 'blue_light')
+                        with open(file_name, 'w',encoding="utf-8") as f:
+                            f.write(html_table)
+                        os.chdir(original_path)
+                        log.log(f"New file created successfully at {path}")
+                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(idx)-1}")
                 else:
-                    dup.details()
-                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(dup_list)} \n school_id :: {school_id}")
+                    return render_template('home.html',prediction_output = f"Number of Duplicates found :: 0")
 
 
         except KeyError as k:
