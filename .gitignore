@@ -143,3 +143,4 @@ data/filtered_data69d62be1-d6bb-4216-b8bf-4372b36f4942.csv
 templates/details.html
 data_prep.txt
 questiion_duplicate_package.txt
+transformed_data.pkl
