@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pickle as pkl
 from flask import Flask, request, render_template
 from flask_cors import cross_origin
 from sqlalchemy import null
@@ -36,11 +37,13 @@ def main():
             print("Entered main function...")
             scentence = request.form.get("Question")
             print(scentence)
+            scentence = scentence.strip().lower()
             config = read_yaml("config.yaml")
             school_id = config["GET_DATA"]["school_id"]
             local_dir = config["GET_DATA"]["local_dir"]
             query = config["GET_DATA"]["query"]
             auth_path = config["GET_DATA"]["auth_json_path"]
+            transformed_data_file = config["GET_DATA"]["transformed_data_file"]
             duplicate = duplicate_v1(auth_path)
             
             if not os.path.exists(local_dir):
@@ -50,32 +53,43 @@ def main():
             duplicate.connect_bigquerry() # Connecting to Big Query
             log.log(f"Connected to the Big Query...")
             log.log(f"Getting the data...")
-            data =  duplicate.fetch_data(query=query) # Downloading the data from Big Query
+            if not os.path.exists(transformed_data_file):
+                data =  duplicate.fetch_data(query=query) # Downloading the data from Big Query if data not present
+            else:
+                with open(transformed_data_file, "rb") as f:
+                    object = pkl.load(f)
+                data = pd.DataFrame(object) # reading the saved pickled data
             log.log(f"Data getting completed...")
 
-            # Preparing the data:
-            prepared_data = data_prep.prepare_data(data)
-        
-        # Cleaning the data:
-            log.log("Instantiating claning of the data...")
-            data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
-            column_name = "clean_question_data"
-            data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
-            log.log(f"Data cleaning completed...")
-
-            #inserting column to the data:
-            col_name = "cleaned_mcq_questions_options"
-            duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
-            log.log(f"{col_name} successfully added.")
         
             # transforming the cleaned data
-            transformed_data = duplicate.transform_data(data_cleaned_nan)
+            if not os.path.exists(transformed_data_file):
+                # Preparing the data:
+                prepared_data = data_prep.prepare_data(data)
+            
+                # Cleaning the data:
+                log.log("Instantiating claning of the data...")
+                data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
+                column_name = "clean_question_data"
+                data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
+                log.log(f"Data cleaning completed...")
+
+                #inserting column to the data:
+                col_name = "cleaned_mcq_questions_options"
+                duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
+                log.log(f"{col_name} successfully added.")
+                transformed_data = duplicate.transform_data(data_cleaned_nan)
+                transformed_data.to_pickle(transformed_data_file) # saving the transformed data
+            else:
+                with open(transformed_data_file, "rb") as f:
+                    object = pkl.load(f)
+                transformed_data = pd.DataFrame(object)
 
             log.log(f"Starting Data Filteration \n")
             # Filtering out the data whose duplicates exists:
             filtered_data = duplicate.filter_duplicate(transformed_data)
             log.log(f"Data filteration completed...\n")
-            scentence = data_cleaned_nan["clean_question_data"].iloc[100]
+            #scentence = data_cleaned_nan["clean_question_data"].iloc[100]
             if scentence:
                 print(scentence)
                 log.log(f"Finding duplicate index started...\n")
