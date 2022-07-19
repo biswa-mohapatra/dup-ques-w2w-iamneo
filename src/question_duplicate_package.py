@@ -75,7 +75,7 @@ class duplicate_v1(object):
                     *,
                     (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
                     FROM `examly-events.schema_testing_views.questions_dup_view` dup
-                    LIMIT 10000
+                    LIMIT 300000
                     '''
             whole_data = pandas_gbq.read_gbq(query, use_bqstorage_api=True,dialect="standard")
             self.log.log(f"Data from bigquery downloaded...\nTime taken :: {time.time() - start_time}")
@@ -346,18 +346,9 @@ class duplicate_v1(object):
                 q_type = int(len(filtered_data["question_type"].iloc[idx]))
                 if q_type > 2:
                     print(f"q_type :: {q_type}")
-                    q_sub = int(len(filtered_data["subject"].iloc[idx]))
-                    if q_sub > 2:
-                        print(f"q_sub :: {q_sub}")
-                        q_topic = int(len(filtered_data["topic"].iloc[idx]))
-                        if q_topic > 2:
-                            print(f"q_topic :: {q_topic}")
-                            q_sub_topic = int(len(filtered_data["sub_topic"].iloc[idx]))
-                            if q_sub_topic > 2:
-                                print(f"q_sub_topic :: {q_sub_topic}")
-                                print(f"Variation found...\nTime taken :: {time.time() - start_time}")
-                                self.log.log(f"Ended Applying filtration for validation of duplicate data...\nVariation found...\nTime taken :: {time.time() - start_time}")
-                                return filtered_data.iloc[idx]
+                    print(f"Variation found...\nTime taken :: {time.time() - start_time}")
+                    self.log.log(f"Ended Applying filtration for validation of duplicate data...\nVariation found...\nTime taken :: {time.time() - start_time}")
+                    return filtered_data.iloc[idx]
             else:
                 print(f"No variations found...\nTime taken :: {time.time() - start_time}")
         except KeyError as k:
