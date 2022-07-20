@@ -127,20 +127,18 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Self created files.
 examly-events-26d60ca289a0.json
 get_data.txt
 MAIN.txt
-data/69d62be1-d6bb-4216-b8bf-4372b36f4942
 clean_data.txt
-data/69d62be1-d6bb-4216-b8bf-4372b36f4942Raw_data.csv
 data/cleaned_data.csv
 filter_data.txt
 duplicate_index.txt
 transform_data.txt
-data/cleaned_data69d62be1-d6bb-4216-b8bf-4372b36f4942.csv
-data/transformed_data69d62be1-d6bb-4216-b8bf-4372b36f4942.csv
-data/filtered_data69d62be1-d6bb-4216-b8bf-4372b36f4942.csv
 templates/details.html
 data_prep.txt
 questiion_duplicate_package.txt
 transformed_data.pkl
+data/
