@@ -37,9 +37,10 @@
                 <div class="col-sm-6">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Paste your question here.</h5>
+                            <h5 class="card-title">Paste your question and school code here.</h5>
                             <!-- Departure -->
-                            <input type="text" name="Question" style="height:50px; width:400px">
+                            <input type="text" name="Question" style="height:50px; width:400px" placeholder="Question" required>
+                            <input type="text" name="SchoolCode" style="height:50px; width:400px" placeholder="School Code" required>
                             <input type="submit" class="btn btn-info" style="height:50px; width:100px">
                         </div>
                     </div>
@@ -56,6 +57,7 @@
 
         <form action="/details" method="POST">
             <input type="submit" class="btn btn-info" value= "Question Details" name="Question Details" style="height:50px; width:200px">
+            <h5 style="background-color:black;color:white">{{ output }}</h5>
         </form>
         <br>
         <br>
