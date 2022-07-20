@@ -36,15 +36,21 @@ def main():
         try:
             print("Entered main function...")
             scentence = request.form.get("Question")
+            school_code = request.form.get("SchoolCode")
+            print(school_code)
+            #print(query)
             print(scentence)
             scentence = scentence.strip().lower()
             config = read_yaml("config.yaml")
-            school_id = config["GET_DATA"]["school_id"]
             local_dir = config["GET_DATA"]["local_dir"]
-            query = config["GET_DATA"]["query"]
             auth_path = config["GET_DATA"]["auth_json_path"]
             transformed_data_file = config["GET_DATA"]["transformed_data_file"]
+            school_code_list = config["GET_DATA"]["school_codes"]
+            file_name = f"{school_code}_{transformed_data_file}"
             duplicate = duplicate_v1(auth_path)
+
+            # defining path for transformed_data_file:
+            file_path = os.path.join(local_dir,file_name)
             
             if not os.path.exists(local_dir):
                 log.log(log_message=f"creating data directory...")
@@ -53,17 +59,17 @@ def main():
             duplicate.connect_bigquerry() # Connecting to Big Query
             log.log(f"Connected to the Big Query...")
             log.log(f"Getting the data...")
-            if not os.path.exists(transformed_data_file):
-                data =  duplicate.fetch_data(query=query) # Downloading the data from Big Query if data not present
+            if not os.path.exists(file_path):
+                data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) # Downloading the data from Big Query if data not present
             else:
-                with open(transformed_data_file, "rb") as f:
+                with open(file_path, "rb") as f:
                     object = pkl.load(f)
                 data = pd.DataFrame(object) # reading the saved pickled data
             log.log(f"Data getting completed...")
 
         
             # transforming the cleaned data
-            if not os.path.exists(transformed_data_file):
+            if not os.path.exists(file_path):
                 # Preparing the data:
                 prepared_data = data_prep.prepare_data(data)
             
@@ -79,9 +85,9 @@ def main():
                 duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
                 log.log(f"{col_name} successfully added.")
                 transformed_data = duplicate.transform_data(data_cleaned_nan)
-                transformed_data.to_pickle(transformed_data_file) # saving the transformed data
+                transformed_data.to_pickle(file_path) # saving the transformed data
             else:
-                with open(transformed_data_file, "rb") as f:
+                with open(file_path, "rb") as f:
                     object = pkl.load(f)
                 transformed_data = pd.DataFrame(object)
 
@@ -94,36 +100,38 @@ def main():
                 print(scentence)
                 log.log(f"Finding duplicate index started...\n")
                 idx = duplicate.find_dup_idx(filtered_data,scentence)
+                template = "templates"
+                file_name_html = f"details.html"
+                path = os.path.join(template, file_name_html)
                 print(len(idx))
                 if len(idx)>1:
                     dup = duplicate.variations(filtered_data=filtered_data,idx=idx)
-                    template = "templates"
-                    file_name = "details.html"
                     new_data = duplicate.fetch_duplicate_data(dup)
                     original_path = os.getcwd()
-                    path = os.path.join(template, file_name)
                     if not os.path.exists(path):
-                        log.log(f"{file_name} isn't present so saving it...")
+                        log.log(f"{file_name_html} isn't present so saving it...")
                         os.chdir(template)
-                        final_data = duplicate.fetch_duplicate_data(dup)
+                        #final_data = duplicate.fetch_duplicate_data(dup)
                         html_table = build_table(new_data, 'blue_light')
                         with open(file_name, 'w',encoding="utf-8") as f:
                             f.write(html_table)
                         os.chdir(original_path)
-                        log.log(f"{file_name} saved successfully at {path}")
+                        log.log(f"{file_name_html} saved successfully at {path}")
                     else:
-                        log.log(f"{file_name} already exists so deleting it...")
-                        print(f"deleing dir {path}")
+                        #print(f"deleing dir {path}")
                         log.log(f"creating new file at {path}...")
                         os.chdir(template)
-                        delete_file(file_name)
+                        delete_file(file_name_html)
                         html_table = build_table(new_data, 'blue_light')
-                        with open(file_name, 'w',encoding="utf-8") as f:
+                        with open(file_name_html, 'w',encoding="utf-8") as f:
                             f.write(html_table)
                         os.chdir(original_path)
                         log.log(f"New file created successfully at {path}")
                     return render_template('home.html',prediction_output = f"Number of Duplicates found :: {len(idx)-1}")
                 else:
+                    log.log(f"{file_name_html} already exists so deleting it...")
+                    if os.path.exists(path):
+                        delete_file(path)
                     return render_template('home.html',prediction_output = f"Number of Duplicates found :: 0")
 
 
@@ -161,10 +169,10 @@ def details():
             return render_template('details.html')
         else:
             log.log(f"File does not exist, hence rendering home page...")
-            return render_template('home.html')
+            return render_template('home.html',output="No details present for 0 matches.")
     else:
         log.log(f"Request method not recived, hence rendering home.html")
-        return render_template('home.html')
+        return render_template('home.html',output="No details present for 0 matches.")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0',port=5000)
