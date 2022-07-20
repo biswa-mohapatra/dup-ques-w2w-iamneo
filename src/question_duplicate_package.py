@@ -53,7 +53,7 @@ class duplicate_v1(object):
             raise Exception
                 
         
-    def fetch_data(self,query):
+    def fetch_data(self,school_code,school_code_list):
         """
         This is a coustom defination for extracting data from
         the bigquerry server.
@@ -67,16 +67,26 @@ class duplicate_v1(object):
         try:
             start_time = time.time()
             self.log.log(f"Fetching data from the bigquerry...")
-            
-            # Fetching the whole data
-            client = bigquery.Client()
-            query = '''
+
+            if school_code == school_code_list:
+                query = """
                     SELECT
                     *,
                     (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
                     FROM `examly-events.schema_testing_views.questions_dup_view` dup
-                    LIMIT 300000
-                    '''
+                    WHERE school_code = '{school_code}';
+                    """
+            else:
+                query = f"""
+                    SELECT
+                    *,
+                    (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
+                    FROM `examly-events.schema_testing_views.questions_dup_view` dup
+                    WHERE school_code = 'neowise';
+                    """
+            
+            # Fetching the whole data
+            client = bigquery.Client()
             whole_data = pandas_gbq.read_gbq(query, use_bqstorage_api=True,dialect="standard")
             self.log.log(f"Data from bigquery downloaded...\nTime taken :: {time.time() - start_time}")
             return whole_data
