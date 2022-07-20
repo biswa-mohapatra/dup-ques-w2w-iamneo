@@ -34,12 +34,12 @@ def main():
     """
     if request.method == "POST":
         try:
-            print("Entered main function...")
+            #print("Entered main function...")
             scentence = request.form.get("Question")
             school_code = request.form.get("SchoolCode")
-            print(school_code)
+            #print(school_code)
             #print(query)
-            print(scentence)
+            #print(scentence)
             scentence = scentence.strip().lower()
             config = read_yaml("config.yaml")
             local_dir = config["GET_DATA"]["local_dir"]
@@ -97,13 +97,13 @@ def main():
             log.log(f"Data filteration completed...\n")
             #scentence = data_cleaned_nan["clean_question_data"].iloc[100]
             if scentence:
-                print(scentence)
+                #print(scentence)
                 log.log(f"Finding duplicate index started...\n")
                 idx = duplicate.find_dup_idx(filtered_data,scentence)
                 template = "templates"
                 file_name_html = f"details.html"
                 path = os.path.join(template, file_name_html)
-                print(len(idx))
+                #print(len(idx))
                 if len(idx)>1:
                     dup = duplicate.variations(filtered_data=filtered_data,idx=idx)
                     new_data = duplicate.fetch_duplicate_data(dup)
