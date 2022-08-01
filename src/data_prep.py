@@ -3,6 +3,19 @@ import pandas as pd
 import numpy as np
 
 def prepare_data(data):
+    """
+    A coustom function to prepare the data that will further fed for preprocessing.
+
+    Params: raw data
+    Returns: Prepared data
+
+    Exceptions:
+
+    Author: Biswajit Mohapatra
+
+    Version: 2.0
+    """
+
     try:
         file_obj =open("data_prep.txt","a+")
         log = App_Logger(file_obj)
@@ -24,7 +37,7 @@ def prepare_data(data):
         no_ques_data = whole_data_notDeleted.iloc[np.where(whole_data_notDeleted['question_data'] == "<p></p>")]
         print(f"Number of rows containing empty question :: {no_ques_data.shape[0]}")
         log.log(f"Number of rows containing empty question :: {no_ques_data.shape[0]}")
-        #no_ques_data.head(2) 
+         
 
         # Storing the data where question is present:
         return whole_data_notDeleted.drop(index=no_ques_data.index,axis=0)

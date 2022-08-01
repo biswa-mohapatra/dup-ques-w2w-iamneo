@@ -134,7 +134,7 @@ class duplicate_v1(object):
                 Coloumn Name -> What name you want for your inserted column will be specified here.
                 Value -> The value you want your column should hold.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
         Version: 2.0
         """
@@ -211,7 +211,6 @@ class duplicate_v1(object):
             if col_name in list(data.columns):
                 none_idx = []
                 self.log.log(f"{col_name} Column present....")
-                print(f"Column present....")
                 for i in range(len(data["mcq_questions_options"])):
                     sample = data["mcq_questions_options"].iloc[i]
                     if not sample == None:
@@ -225,7 +224,6 @@ class duplicate_v1(object):
                 self.log.log(f"Answer Data cleaned...\nTime taken :: {time.time() - start_time}")
                 return data
             else:
-                print("Insert cleaned_mcq_questions_options into your data...")
                 self.log.log(f"Insert cleaned_mcq_questions_options into your data...")
         except KeyError as k:
             self.log.log(f"Something went wrong at clesning the data :: {k}")
@@ -351,12 +349,9 @@ class duplicate_v1(object):
         try:
             self.log.log(f"Started Applying filtration for validation of duplicate data")
             start_time = time.time()
-            if len(filtered_data.iloc[idx].index)>1:
-                print(f"filtered_data :: {len(filtered_data.iloc[idx].index)}")
+            if len(filtered_data.iloc[idx])>1:
                 q_type = int(len(filtered_data["question_type"].iloc[idx]))
-                if q_type > 2:
-                    print(f"q_type :: {q_type}")
-                    print(f"Variation found...\nTime taken :: {time.time() - start_time}")
+                if q_type > 1:
                     self.log.log(f"Ended Applying filtration for validation of duplicate data...\nVariation found...\nTime taken :: {time.time() - start_time}")
                     return filtered_data.iloc[idx]
             else:
@@ -388,7 +383,7 @@ class duplicate_v1(object):
             ans_cleaned_data3 = data 
             self.log.log(f"Ended fetching the duplicate data.")
             final_data = self.clean_answer_data(data,"cleaned_mcq_questions_options")
-            final_data = ans_cleaned_data3.iloc[np.where(ans_cleaned_data3["cleaned_mcq_questions_options"].duplicated() == True)]
+            final_data = ans_cleaned_data3.iloc[np.where(ans_cleaned_data3["duplicate"] == True)]
             return final_data[["qb_id","q_id","clean_question_data","manual_difficulty","question_type","imported","subject_id","topic_id","createdAt","school_id","q_deletedAt","qb_deletedAt","school_code","cleaned_mcq_questions_options","qb_name","duplicate"]]
         except KeyError as k:
             self.log.log(f"Something went wrong at clesning the NaN data :: {k}")
