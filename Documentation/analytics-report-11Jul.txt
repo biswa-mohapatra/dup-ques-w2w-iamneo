@@ -1,0 +1,110 @@
+Data Insights
+--------------
+1. Data present in our DB - 9279104
+2. Number of Question Type present in our DB - 19/20
+3. Most appeared question type in DB - mcq_single_correct : 8567512 : 92%
+				     - programming : 393877 : 4%
+				     - descriptive_answer_writing : 153574 : 2%
+				     - fillup_single_correct : 110533 : 1%
+
+------------------------------------------------
+Data For only mcq_single_correct : 8567512 : 92%
+-------------------------------------------------
+4. Option rows empty in mcq_single_correct : 26740 : 0.31% --> Question present, option has 'None' value
+5. Rows without a question data in mcq_single correct : 73140 : 0.85% --> Question is empty, options have empty list '[]' (arround 72909 : 99.68%)
+6. Total rows with both option and question rows being empty  : 99,880/85,67,512 : 1.167%
+7. Total subjects in mcq_single_correct : 79
+
+8. Subject with most 'None' options : [Option rows empty in mcq_single_correct : 26740 : 0.31% --> Question present, option has None value]
+	COE                      6200	23%
+	Aptitude                  903	3.37%
+	Programming               321	1.20%
+	Engineering                50	0.18%
+	VISTAS                     23	0.086%
+	Test Subject               18	0.067%
+	Data                        2	0.0074%
+	MCQ                         2	0.0074%
+	Computer Applications       1	0.0037%
+----------------------------------------------------------------------------------------
+[Rows without a question data in mcq_single correct : 73140 : 0.85% --> Question is empty, options have empty list '[]' (arround 72909 : 99.68%)]
+----------------------------------------------------------------------------------------
+9. Subject column empty: 72859 : 99.93%
+
+10. Subject with most empty option columns:
+bulk-imported    27	0.037%
+Aptitude         20	0.027%
+Nandha            2	0.0027%
+VISTAS            1	0.00137%
+
+----------------------------------------------------
+Cross check with senthilvel with live data : Question is empty, options have empty list '[]' : 15:30PM
+----------------------------------------------------
+all statement and options are available:
+	qb_id						q_id				question_data	manual_difficulty	question_type		imported		subject_id	topic_id	sub_topic_id	subject	topic	sub_topic	createdAt		school_id				q_deletedAt	qb_deletedAt		school_code	mcq_questions_options	mcq_questions_answer	qb_name
+	------						-----				-------------	-----------------	--------------		--------		----------	--------	-------------	-------------	---------	---------		---------				-----------	------------		-----------	---------------------	--------------------	--------
+620135	2a40e98d-0727-4797-ac43-6d36a062401d	c7469858-0984-4887-9443-64296e2c0bfd	<p></p>		Medium			mcq_single_correct	original_question											2020-09-24 11:08:31	b3e683c7-016b-4c9a-95bc-350ac5959fb0			2020-09-24 11:09:20	kct559		[]			{}			P18PEE2003 Flexible AC Transmission System
+620744	4a23a32c-5e03-4402-bdb5-bf46447979af	627a75c0-f7c2-442c-a96b-5194046815e8	<p></p>		Medium			mcq_single_correct	original_question											2020-09-20 02:29:16	c7bde760-cc4a-4d2d-a91d-0fe6031a8ff1			2020-09-20 02:33:32	psgtech850	[]			{}			15OH62_ENTREPRENEURSHIP_HUMANITIES
+
+bank not available:
+620148	1f5f2e26-9b47-4e88-8c3c-970f094e4800	35e4da33-8aa7-4117-879a-3f0c6190c700	<p></p>		Medium			mcq_single_correct	original_question											2020-09-20 04:45:14	c7bde760-cc4a-4d2d-a91d-0fe6031a8ff1			2020-09-20 04:45:32	psgtech850	[]			{}			15MXDH_Open Source Systems_MCA
+
+--------------------------------------------------------
+Discussion with Harish : Question is empty, options have empty list '[]' : 17:36pm
+--------------------------------------------------------
+1.As Senthilvel was checking the data using only qb_name[Question bank name], the possibility is the old qb_name[Question bank name] is replaced with new qb_name[Question bank name] with the same name but in the backend the qb_id[Question bank ID] will be different that is why the data is present in the front-end but
+not in the back-end.
+2.For the question if either of the data for q_deletedAt or qb_deletedAt is present then the particular question won't show in the front-end.
+------
+Update: Till now we had only answers synced from FEB-2021 to till date, but harish will sync from 2018 to till date for saftey. 
+------
+
+------
+Date : 12th July 2022 / 16:00 [Deleted questions details]
+------
+1. Empty mcq rows whose question deletion or qb deletion data is absent : 1006/72134 [2018-2022]
+			- 72134 : Number of questions where question data is empty.
+2. Empty mcq rows whose question deletion or qb deletion data is absent : 2320/8495378 [2018-2022]
+			- 8495378 : Number of questions where question data is present.
+
+3. Data of either question or question bank is deleted : 795876/8495378 
+
+4. Data that is actually present in both frond-end and back-end : 7771636/8495378
+
+5. Empty mcq rows whose question deletion or qb deletion data is absent : 238/8495378 [2021-2022] [Bug: Need to be fixed]
+
+------------
+Date: 14th July 2022/18:04PM
+-----------
+
+--------
+Data For only mcq_single_correct : 8567512 : 92%
+--------
+
+Code works perfectly: The code is able to do the following in the following order:
+
+	1. Estrablish the connection with the BigQuery.
+	2. Fetch the data from the BigQuery on the given querry.
+	3. Clean the data[quetion data]
+	4. Transform the data
+	5. Filter the questions whose duplicates exists.
+	6. Could able to show the variations of the duplicated questions along with the details by the following filteres:
+		1. if question type is similar
+		2. if question subject is similar
+		3. if question topic is similar
+		4. if question sub topic is similar
+	7. If all the filters are true, the question is then passed for the answer similarity check
+	8. Clean the answer data for similarity check
+	9. In case of similar, the question is labeled as duplicate.
+------
+Exception:
+	The code fails to distinguish between options having diffrent words but have same 
+meaning. Example, 'None','None of the above' and 'None of these' all have the same meaning but
+have different words.
+------
+
+------
+Possible solution:
+
+1. Word by word check of the options for the filtered data
+2. Semantic meaning check of the options using Deep Learning.
+------ 
