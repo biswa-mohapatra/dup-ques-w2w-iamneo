@@ -1,3 +1,8 @@
+"""
+This is a custom module to perform every function for 
+preparation of the data.
+"""
+# Importing all the dependencies...
 from application_logger.logging import App_Logger
 import pandas as pd
 import numpy as np

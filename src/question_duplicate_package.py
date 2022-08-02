@@ -1,3 +1,9 @@
+"""
+THis is a custom module to perform every operation that could be required 
+for finding the question duplicates.
+
+"""
+# Importng all the dependencies... 
 from src.utils.common import read_yaml,create_directories,save_json,delete_file
 from application_logger.logging import App_Logger
 from pretty_html_table import build_table
@@ -20,7 +26,7 @@ class duplicate_v1(object):
         This is a coustom class to perform all the necessary operations 
         required for filtering a duplicate.
 
-        Params: None
+        Params: Authentication file path : str
 
         Author: Biswajit Mohapatra, Swati Kahar
 
