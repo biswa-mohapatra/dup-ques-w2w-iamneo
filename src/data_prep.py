@@ -37,10 +37,8 @@ def prepare_data(data):
 
         # Finding Empty question data rows:
 
-        print(f"Number of questions in actual data :: {whole_data_notDeleted.shape[0]}")
         log.log(f"Number of questions in actual data :: {whole_data_notDeleted.shape[0]}")
         no_ques_data = whole_data_notDeleted.iloc[np.where(whole_data_notDeleted['question_data'] == "<p></p>")]
-        print(f"Number of rows containing empty question :: {no_ques_data.shape[0]}")
         log.log(f"Number of rows containing empty question :: {no_ques_data.shape[0]}")
          
 
