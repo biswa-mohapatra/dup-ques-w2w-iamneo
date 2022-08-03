@@ -8,7 +8,7 @@ However, sometimes the question being prepared gets repeated and stored in the d
 This is a project as a part of our internal tech optimization and helping Neo Elon team not facing the duplicate question problem.
 
 # Architecture Design
-[link](https://github.com/biswa-mohapatra/dup-ques-w2w-iamneo/blob/main/Documentation/Architecture.png)
+[[link](https://github.com/biswa-mohapatra/dup-ques-w2w-iamneo/blob/main/Documentation/Architecture.png)]
 
 
 # Data Flow:
