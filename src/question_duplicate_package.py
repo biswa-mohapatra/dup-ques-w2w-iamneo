@@ -166,8 +166,10 @@ class duplicate_v1(object):
             data["question_data"] = data["question_data"].replace(r"<p></p>",np.NaN,regex=True)
             if not "clean_question_data" in data.columns:
                 data.insert(loc=3,column="clean_question_data",value=data["question_data"].str.replace(r'<[^<>]*>','',regex=True).replace('&amp','').replace('&nbsp','').replace('}',''))
+                data["clean_question_data"] = data["clean_question_data"].map(lambda x: re.sub("&nbsp","",str(x)))
             else:
-                data["clean_question_data"] = data["question_data"].str.replace(r'<[^<>]*>','',regex=True)
+                data["clean_question_data"] = data["question_data"].str.replace(r'<[^<>]*>','',regex=True).replace('&amp','').replace('&nbsp','').replace('}','')
+                data["clean_question_data"] = data["clean_question_data"].map(lambda x: re.sub("&nbsp","",str(x)))
             self.log.log(f"Data cleaned...\nTime taken :: {time.time() - start_time}")
             return data
         except KeyError as k:
