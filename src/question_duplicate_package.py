@@ -73,9 +73,9 @@ class duplicate_v1(object):
         try:
             start_time = time.time()
             self.log.log(f"Fetching data from the bigquerry...")
-
-            if school_code == school_code_list:
-                query = """
+            school_code = str(school_code)
+            if school_code in school_code_list:
+                query = f"""
                     SELECT
                     *,
                     (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
@@ -90,7 +90,7 @@ class duplicate_v1(object):
                     FROM `examly-events.schema_testing_views.questions_dup_view` dup
                     WHERE school_code = 'neowise';
                     """
-            
+            #print(query)
             # Fetching the whole data
             client = bigquery.Client()
             whole_data = pandas_gbq.read_gbq(query, use_bqstorage_api=True,dialect="standard")
