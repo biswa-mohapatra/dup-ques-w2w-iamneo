@@ -120,9 +120,10 @@ def main():
                     log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
 
                     # Deleting the created file from local memory after uploading.
-                    log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
-                    delete_file(upload_file_path)
-                    log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
+                    if os.path.exists(upload_file_path):
+                        log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
+                        delete_file(upload_file_path)
+                        log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
                 else:
                     with open(upload_file_path, "rb") as f:
                         object = pkl.load(f)
@@ -142,9 +143,10 @@ def main():
             filtered_data = duplicate.filter_duplicate(transformed_data)
 
             # deleting the file after downloading.
-            log.log(f"Data fetched successfully so deleting the downloaded file :: {upload_file_path}")
-            delete_file(upload_file_path)
-            log.log(f"Data fetched successfully so deleted the downloaded file :: {upload_file_path}")
+            if os.path.exists(upload_file_path):
+                log.log(f"Data fetched successfully so deleting the downloaded file :: {upload_file_path}")
+                delete_file(upload_file_path)
+                log.log(f"Data fetched successfully so deleted the downloaded file :: {upload_file_path}")
             log.log(f"Data filteration completed...\n")
 
             #If the secentence is present, the following operation will be performed.
@@ -152,7 +154,7 @@ def main():
                 log.log(f"Finding duplicate index started...\n")
                 idx = duplicate.find_dup_idx(filtered_data,scentence)
                 template = "templates"
-                file_name_html = f"details.html"
+                file_name_html = "details.html"
                 path = os.path.join(template, file_name_html)
                 if len(idx)>1:
                     dup = duplicate.variations(filtered_data=filtered_data,idx=idx[1::])
