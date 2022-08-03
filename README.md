@@ -12,7 +12,7 @@ This is a project as a part of our internal tech optimization and helping Neo El
 
 
 # Data Flow:
-[]https://www.figma.com/embed?embed_host=share&url=https%3A%2F%2Fwww.figma.com%2Ffile%2FJrsbruMXVhNl7z7g4fA38I%2FW2W_Duplicate_Data_Flow%3Fnode-id%3D0%253A1
+[](https://www.figma.com/embed?embed_host=share&url=https%3A%2F%2Fwww.figma.com%2Ffile%2FJrsbruMXVhNl7z7g4fA38I%2FW2W_Duplicate_Data_Flow%3Fnode-id%3D0%253A1)
 
 ## Commands using -
 
