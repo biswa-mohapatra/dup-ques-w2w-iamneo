@@ -9,13 +9,15 @@ Author: Biswajit Mohapatra, Swati Kahar
 # Importing all the dependencies...
 import os
 import pandas as pd
+import numpy as np
 import pickle as pkl
 from flask import Flask, request, render_template
 from flask_cors import cross_origin
 from sqlalchemy import null
 from pretty_html_table import build_table
 from src.question_duplicate_package import duplicate_v1
-from src import data_prep,cloud_operations 
+from src import data_prep,cloud_operations
+from src.bulk_upload import bulk_upload_questions 
 from src.utils.common import read_yaml,create_directories,delete_file
 from application_logger.logging import App_Logger
 
@@ -43,6 +45,7 @@ def main():
     """
     if request.method == "POST":
         try:
+            log.log(f"\n\n********************************Single question upload.*******************************************\n")
             log.log("Entered main function and getting the credentials from the config file.")
             scentence = request.form.get("Question")
             school_code = request.form.get("SchoolCode")
@@ -212,6 +215,7 @@ def details():
     else the home page will only be rendered. 
     """
     if request.method == "POST":
+        log.log(f"\n\n********************************Single upload page.*******************************************\n")
         log.log(f"Request method recived for details api...")
         path = "templates/details.html"
         if os.path.exists(path):
@@ -223,6 +227,168 @@ def details():
     else:
         log.log(f"Request method not recived, hence rendering home.html")
         return render_template('home.html',output="No details present for 0 matches.")
+
+
+@app.route("/bulk-upload", methods = ["GET", "POST"])
+@cross_origin()
+def bulk_upload():
+    """
+    This function is responsible for reciveing,processing and sending response to
+    the UI.
+    """
+    if request.method == "POST":
+        log.log(f"\n\n********************************Duplicate question check for bulk upload page.*******************************************\n")
+        log.log(f"API for bulk-upload is being hitted successfully. Starting the bulk-upload process.")
+        path = "templates/bulk_upload.html"
+        if os.path.exists(path):
+            log.log(f"{path} exists.")
+            return render_template("bulk_upload.html")
+        else:
+            return render_template("home.html")
+
+@app.route("/duplicate-question-bulk-upload", methods = ["GET", "POST"])
+@cross_origin()
+def question_details_bulk_upload():
+    """
+    This function is responsible for all the processing of the
+    data recieved for the bulk upload.
+    """
+    if request.method == "POST":
+        try:
+            log.log(f"\n\n********************************Duplicate question check for bulk upload.*******************************************\n")
+            questions = request.form.get("Bulk_Question")
+            school_code = request.form.get("SchoolCode")
+            config = read_yaml("config.yaml")
+            local_dir = config["GET_DATA"]["local_dir"]
+            auth_path = config["GET_DATA"]["auth_json_path"]
+            transformed_data_file = config["GET_DATA"]["transformed_data_file"]
+            school_code_list = config["GET_DATA"]["school_codes"]
+            bucket_auth = config["GET_DATA"]["bucket_auth"]
+            bucket_name = config["GET_DATA"]["bucket_name"]
+            file_name = f"{school_code}_{transformed_data_file}"
+            log.log(f"Checking for shcool code i.e., {school_code} presence.")
+            if school_code in school_code_list:
+                # defining blob name for storing in cloud.
+                blob_name = file_name
+
+                # file path to pass for cloud operations.
+                upload_file_path = os.path.join(local_dir, file_name) 
+                cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
+                fileNames_recived = cloud_ops.check_for_blob_presence()
+
+                # calling the question duplicate package.
+                duplicate = duplicate_v1(auth_path)
+                if not blob_name in fileNames_recived:
+                    log.log(f"Blob with name :: {blob_name} isn't present, so fetching the data from Big-query.")
+                    # defining path for transformed_data_file:
+
+                    # Fetching the data
+                    if not os.path.exists(local_dir):
+                        log.log(log_message=f"creating data directory...")
+                        create_directories([local_dir])
+                    log.log(f"Connecting to the Big Query...")
+
+                    # Connecting to Big Query
+                    duplicate.connect_bigquerry() 
+                    log.log(f"Connected to the Big Query...")
+                    log.log(f"Getting the data...")
+
+                    # Downloading the data from Big Query if data not present
+                    if not os.path.exists(upload_file_path):
+                        data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) 
+                    else:
+                        with open(upload_file_path, "rb") as f:
+                            object = pkl.load(f)
+                        data = pd.DataFrame(object) # reading the saved pickled data
+                    log.log(f"Data getting completed...")
+
+
+                    # transforming the cleaned data
+                    if not os.path.exists(upload_file_path):
+                        # Preparing the data:
+                        prepared_data = data_prep.prepare_data(data)
+                
+                        # Cleaning the data:
+                        log.log("Instantiating claning of the data...")
+                        data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
+                        column_name = "clean_question_data"
+                        data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
+                        log.log(f"Data cleaning completed...")
+
+                        #inserting column to the data:
+                        col_name = "cleaned_mcq_questions_options"
+                        duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
+                        log.log(f"{col_name} successfully added.")
+                        transformed_data = duplicate.transform_data(data_cleaned_nan)
+                        log.log(f"Data tranformation completed, now saving the file to pickle.")
+
+                        # saving the transformed data
+                        transformed_data.to_pickle(upload_file_path) 
+                        log.log(f"Data saved successfully at :: {upload_file_path}")
+
+                        # uploading the saved data to google service.
+                        log.log(f"Uploading the data to the google cloud storage.")
+                        blob = cloud_ops.upload_file()
+                        log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
+
+                        # Deleting the created file from local memory after uploading.
+                        if os.path.exists(upload_file_path):
+                            log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
+                            delete_file(upload_file_path)
+                            log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
+                    else:
+                        with open(upload_file_path, "rb") as f:
+                            object = pkl.load(f)
+                        transformed_data = pd.DataFrame(object)
+
+                else:
+                    log.log(f"Blob with {blob_name} present in the cloud storage, so staring the download.")
+                    # downloading the file
+                    cloud_ops.download_file(upload_file_path) 
+                    log.log(f"Successfully downloaded the file.")
+                    with open(upload_file_path, "rb") as f:
+                            object = pkl.load(f)
+                    transformed_data = pd.DataFrame(object)
+
+                # Staring to check for duplicates for bulk uploaded questions.
+                log.log(f"Checking for bulk-question duplicates.")
+                if not type(questions) == np.ndarray:
+                    questions = np.array(questions) # converting the list of questions into array
+                bulkupload = bulk_upload_questions(questions,transformed_data)
+                print("Filtering questions")
+                filtered_question = bulkupload.duplicate_questions()
+                print(filtered_question)
+                # Saving the filtred duplicate question table as html to render.
+                template = "templates"
+                file_name_html = "bulk-upload-dulicates.html"
+                path = os.path.join(template, file_name_html) # path to the html template.
+
+                original_path = os.getcwd()
+                if not os.path.exists(path):
+                    log.log(f"{file_name_html} isn't present so saving it...")
+                    os.chdir(template)
+                    html_table = build_table(filtered_question, 'blue_light')
+                    with open(file_name_html, 'w',encoding="utf-8") as f:
+                        f.write(html_table)
+                    os.chdir(original_path)
+                    log.log(f"{file_name_html} saved successfully at {path}")
+                else:
+                    log.log(f"creating new file at {path}...")
+                    os.chdir(template)
+                    delete_file(file_name_html)
+                    html_table = build_table(filtered_question, 'blue_light')
+                    with open(file_name_html, 'w',encoding="utf-8") as f:
+                        f.write(html_table)
+                    os.chdir(original_path)
+                    log.log(f"New file created successfully at {path}")
+                return render_template("bulk-upload-dulicates.html")
+
+            else:
+                log.log(f"{school_code} is not available.")
+                return render_template("bulk_upload.html")
+        except Exception as e:
+            log.log(f"Something went wrong :: {e}")
+                
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0',port=5000)
