@@ -4,7 +4,7 @@ GET_DATA:
   data_file_name : "Raw_data.csv"
   bucket_name : "test_data_bb"
   auth_json_path : "examly-events-26d60ca289a0.json"
-  bucket_auth : 'examly-dev-46b364d962d5.json'
+  bucket_auth : 'examly-dev-71649ccad343.json'
   transformed_data_file : "transformed_data.pkl"
   school_codes : ['rmkec496', 'psgtech', 'cbit450', 'psgtech850', 'gprec748',
        'neowise', 'bit410', 'mazenet708', 'neohire', 'placementseason668',
