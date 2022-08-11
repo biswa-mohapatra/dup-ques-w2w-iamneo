@@ -1,9 +1,9 @@
 """
-This is a main function for the application.
+This is main function for the application.
 
 Version : 2.0
 
-Author: Biswajit Mohapatra, Swati Kahar
+Author: Biswajit Mohapatra
 """
 
 # Importing all the dependencies...
@@ -59,86 +59,91 @@ def main():
             bucket_name = config["GET_DATA"]["bucket_name"]
             file_name = f"{school_code}_{transformed_data_file}"
 
-            # defining blob name for storing in cloud.
-            blob_name = file_name 
+            if not os.path.exists(file_name):# defining blob name for storing in cloud.
+                blob_name = file_name 
 
-            # file path to pass for cloud operations.
-            upload_file_path = os.path.join(local_dir, file_name) 
-            cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
-            fileNames_recived = cloud_ops.check_for_blob_presence()
+                # file path to pass for cloud operations.
+                upload_file_path = os.path.join(local_dir, file_name) 
+                cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
+                fileNames_recived = cloud_ops.check_for_blob_presence()
+                
+                # calling the question duplicate package.
+                duplicate = duplicate_v1(auth_path)
+                if not blob_name in fileNames_recived:
+                    log.log(f"Blob with name :: {blob_name} isn't present, so fetching the data from Big-query.")
+                    # defining path for transformed_data_file:
+
+                    # Fetching the data
+                    if not os.path.exists(local_dir):
+                        log.log(log_message=f"creating data directory...")
+                        create_directories([local_dir])
+                    log.log(f"Connecting to the Big Query...")
+
+                    # Connecting to Big Query
+                    duplicate.connect_bigquerry() 
+                    log.log(f"Connected to the Big Query...")
+                    log.log(f"Getting the data...")
+
+                    # Downloading the data from Big Query if data not present
+                    if not os.path.exists(upload_file_path):
+                        data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) 
+                    else:
+                        with open(upload_file_path, "rb") as f:
+                            object = pkl.load(f)
+                        data = pd.DataFrame(object) # reading the saved pickled data
+                    log.log(f"Data getting completed...")
+
             
-            # calling the question duplicate package.
-            duplicate = duplicate_v1(auth_path)
-            if not blob_name in fileNames_recived:
-                log.log(f"Blob with name :: {blob_name} isn't present, so fetching the data from Big-query.")
-                # defining path for transformed_data_file:
+                    # transforming the cleaned data
+                    if not os.path.exists(upload_file_path):
+                        # Preparing the data:
+                        prepared_data = data_prep.prepare_data(data)
+                
+                        # Cleaning the data:
+                        log.log("Instantiating claning of the data...")
+                        data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
+                        column_name = "clean_question_data"
+                        data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
+                        log.log(f"Data cleaning completed...")
 
-                # Fetching the data
-                if not os.path.exists(local_dir):
-                    log.log(log_message=f"creating data directory...")
-                    create_directories([local_dir])
-                log.log(f"Connecting to the Big Query...")
+                        #inserting column to the data:
+                        col_name = "cleaned_mcq_questions_options"
+                        duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
+                        log.log(f"{col_name} successfully added.")
+                        transformed_data = duplicate.transform_data(data_cleaned_nan)
+                        log.log(f"Data tranformation completed, now saving the file to pickle.")
 
-                # Connecting to Big Query
-                duplicate.connect_bigquerry() 
-                log.log(f"Connected to the Big Query...")
-                log.log(f"Getting the data...")
+                        # saving the transformed data
+                        transformed_data.to_pickle(upload_file_path) 
+                        log.log(f"Data saved successfully at :: {upload_file_path}")
 
-                # Downloading the data from Big Query if data not present
-                if not os.path.exists(upload_file_path):
-                    data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) 
+                        # uploading the saved data to google service.
+                        log.log(f"Uploading the data to the google cloud storage.")
+                        blob = cloud_ops.upload_file()
+                        log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
+
+                        # Deleting the created file from local memory after uploading.
+                        if os.path.exists(upload_file_path):
+                            log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
+                            delete_file(upload_file_path)
+                            log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
+                    else:
+                        with open(upload_file_path, "rb") as f:
+                            object = pkl.load(f)
+                        transformed_data = pd.DataFrame(object)
+
                 else:
+                    log.log(f"Blob with {blob_name} present in the cloud storage, so staring the download.")
+                    # downloading the file
+                    cloud_ops.download_file(upload_file_path) 
+                    log.log(f"Successfully downloaded the file.")
                     with open(upload_file_path, "rb") as f:
-                        object = pkl.load(f)
-                    data = pd.DataFrame(object) # reading the saved pickled data
-                log.log(f"Data getting completed...")
-
-        
-                # transforming the cleaned data
-                if not os.path.exists(upload_file_path):
-                    # Preparing the data:
-                    prepared_data = data_prep.prepare_data(data)
-            
-                    # Cleaning the data:
-                    log.log("Instantiating claning of the data...")
-                    data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
-                    column_name = "clean_question_data"
-                    data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
-                    log.log(f"Data cleaning completed...")
-
-                    #inserting column to the data:
-                    col_name = "cleaned_mcq_questions_options"
-                    duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
-                    log.log(f"{col_name} successfully added.")
-                    transformed_data = duplicate.transform_data(data_cleaned_nan)
-                    log.log(f"Data tranformation completed, now saving the file to pickle.")
-
-                    # saving the transformed data
-                    transformed_data.to_pickle(upload_file_path) 
-                    log.log(f"Data saved successfully at :: {upload_file_path}")
-
-                    # uploading the saved data to google service.
-                    log.log(f"Uploading the data to the google cloud storage.")
-                    blob = cloud_ops.upload_file()
-                    log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
-
-                    # Deleting the created file from local memory after uploading.
-                    if os.path.exists(upload_file_path):
-                        log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
-                        delete_file(upload_file_path)
-                        log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
-                else:
-                    with open(upload_file_path, "rb") as f:
-                        object = pkl.load(f)
+                            object = pkl.load(f)
                     transformed_data = pd.DataFrame(object)
-
             else:
-                log.log(f"Blob with {blob_name} present in the cloud storage, so staring the download.")
-                # downloading the file
-                cloud_ops.download_file(upload_file_path) 
-                log.log(f"Successfully downloaded the file.")
+                log.log(f"{file_name} already present in the cache storage.")
                 with open(upload_file_path, "rb") as f:
-                        object = pkl.load(f)
+                            object = pkl.load(f)
                 transformed_data = pd.DataFrame(object)
 
             log.log(f"Starting Data Filteration \n")
@@ -146,10 +151,10 @@ def main():
             filtered_data = duplicate.filter_duplicate(transformed_data)
 
             # deleting the file after downloading.
-            if os.path.exists(upload_file_path):
-                log.log(f"Data fetched successfully so deleting the downloaded file :: {upload_file_path}")
-                delete_file(upload_file_path)
-                log.log(f"Data fetched successfully so deleted the downloaded file :: {upload_file_path}")
+            #if os.path.exists(upload_file_path):
+                #log.log(f"Data fetched successfully so deleting the downloaded file :: {upload_file_path}")
+                #delete_file(upload_file_path)
+                #log.log(f"Data fetched successfully so deleted the downloaded file :: {upload_file_path}")
             log.log(f"Data filteration completed...\n")
 
             #If the secentence is present, the following operation will be performed.
@@ -256,8 +261,10 @@ def question_details_bulk_upload():
     if request.method == "POST":
         try:
             log.log(f"\n\n********************************Duplicate question check for bulk upload.*******************************************\n")
-            questions = request.form.get("Bulk_Question")
+            ques = request.form.get("BulkQuestion")
             school_code = request.form.get("SchoolCode")
+            questions = []
+            questions.append(ques)
             config = read_yaml("config.yaml")
             local_dir = config["GET_DATA"]["local_dir"]
             auth_path = config["GET_DATA"]["auth_json_path"]
@@ -267,127 +274,142 @@ def question_details_bulk_upload():
             bucket_name = config["GET_DATA"]["bucket_name"]
             file_name = f"{school_code}_{transformed_data_file}"
             log.log(f"Checking for shcool code i.e., {school_code} presence.")
-            if school_code in school_code_list:
-                # defining blob name for storing in cloud.
-                blob_name = file_name
-
-                # file path to pass for cloud operations.
-                upload_file_path = os.path.join(local_dir, file_name) 
-                cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
-                fileNames_recived = cloud_ops.check_for_blob_presence()
-
-                # calling the question duplicate package.
-                duplicate = duplicate_v1(auth_path)
-                if not blob_name in fileNames_recived:
-                    log.log(f"Blob with name :: {blob_name} isn't present, so fetching the data from Big-query.")
-                    # defining path for transformed_data_file:
-
-                    # Fetching the data
-                    if not os.path.exists(local_dir):
-                        log.log(log_message=f"creating data directory...")
-                        create_directories([local_dir])
-                    log.log(f"Connecting to the Big Query...")
-
-                    # Connecting to Big Query
-                    duplicate.connect_bigquerry() 
-                    log.log(f"Connected to the Big Query...")
-                    log.log(f"Getting the data...")
-
-                    # Downloading the data from Big Query if data not present
-                    if not os.path.exists(upload_file_path):
-                        data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) 
-                    else:
-                        with open(upload_file_path, "rb") as f:
-                            object = pkl.load(f)
-                        data = pd.DataFrame(object) # reading the saved pickled data
-                    log.log(f"Data getting completed...")
-
-
-                    # transforming the cleaned data
-                    if not os.path.exists(upload_file_path):
-                        # Preparing the data:
-                        prepared_data = data_prep.prepare_data(data)
+            file_path = os.path.join("data",file_name)
+            
+            if school_code in school_code_list:            #checking if the entered school code is a valid school code
                 
-                        # Cleaning the data:
-                        log.log("Instantiating claning of the data...")
-                        data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
-                        column_name = "clean_question_data"
-                        data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
-                        log.log(f"Data cleaning completed...")
+                if not os.path.exists(file_path):
+                    log.log(f"{file_name} doesn't exist in local cache memory.")
+                    # defining blob name for storing in cloud.
+                    blob_name = file_name
 
-                        #inserting column to the data:
-                        col_name = "cleaned_mcq_questions_options"
-                        duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
-                        log.log(f"{col_name} successfully added.")
-                        transformed_data = duplicate.transform_data(data_cleaned_nan)
-                        log.log(f"Data tranformation completed, now saving the file to pickle.")
+                    # file path to pass for cloud operations.
+                    upload_file_path = os.path.join(local_dir, file_name)
+                    log.log(f"Calling the cloud operation.") 
+                    cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
+                    log.log(f"Checking for {file_name} in cloud storage.")
+                    fileNames_recived = cloud_ops.check_for_blob_presence()
 
-                        # saving the transformed data
-                        transformed_data.to_pickle(upload_file_path) 
-                        log.log(f"Data saved successfully at :: {upload_file_path}")
+                    # calling the question duplicate package.
+                    duplicate = duplicate_v1(auth_path)
+                    if not blob_name in fileNames_recived:
+                        log.log(f"Blob with name :: {blob_name} isn't present, so fetching the data from Big-query.")
+                        # defining path for transformed_data_file:
 
-                        # uploading the saved data to google service.
-                        log.log(f"Uploading the data to the google cloud storage.")
-                        blob = cloud_ops.upload_file()
-                        log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
+                        # Fetching the data
+                        if not os.path.exists(local_dir):
+                            log.log(log_message=f"creating data directory...")
+                            create_directories([local_dir]) # creating a directory to store file if doesn't exist.
+                        log.log(f"Connecting to the Big Query...")
 
-                        # Deleting the created file from local memory after uploading.
-                        if os.path.exists(upload_file_path):
-                            log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
-                            delete_file(upload_file_path)
-                            log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
+                        # Connecting to Big Query
+                        duplicate.connect_bigquerry() 
+                        log.log(f"Connected to the Big Query...")
+                        log.log(f"Getting the data...")
+
+                        # Downloading the data from Big Query if data not present
+                        if not os.path.exists(upload_file_path):
+                            data =  duplicate.fetch_data(school_code=school_code,school_code_list=list(school_code_list)) 
+                        else:
+                            with open(upload_file_path, "rb") as f:
+                                object = pkl.load(f)
+                            data = pd.DataFrame(object) # reading the saved pickled data
+                        log.log(f"Getting data completed...")
+
+
+                        # transforming the cleaned data
+                        if not os.path.exists(upload_file_path):
+                            # Preparing the data:
+                            log.log(f"{upload_file_path} doesn't exist, hence starting data preparation.")
+                            prepared_data = data_prep.prepare_data(data)
+                    
+                            # Cleaning the data:
+                            log.log("Instantiating cleaning of the data...")
+                            data_cleaned = duplicate.clean_data(prepared_data)# removing the html tags from the data and storing the data
+                            column_name = "clean_question_data"
+                            data_cleaned_nan = duplicate.clean_nan(data_cleaned,column_name)# remove the nan created while removing the html tags
+                            log.log(f"Data cleaning completed...")
+
+                            #inserting column to the data:
+                            col_name = "cleaned_mcq_questions_options"
+                            duplicate.insert_col(data_cleaned_nan,18,col_name,value="")
+                            log.log(f"{col_name} successfully added.")
+                            transformed_data = duplicate.transform_data(data_cleaned_nan)
+                            log.log(f"Data tranformation completed, now saving the file to pickle.")
+
+                            # saving the transformed data
+                            transformed_data.to_pickle(upload_file_path) 
+                            log.log(f"Data saved successfully at :: {upload_file_path}")
+
+                            # uploading the saved data to google service.
+                            log.log(f"Uploading the data to the google cloud storage.")
+                            blob = cloud_ops.upload_file()
+                            log.log(f"File uploaded successfully to the google cloude service with blob name as :: {blob.id}")
+
+                            # Deleting the created file from local memory after uploading.
+                            if os.path.exists(upload_file_path):
+                                log.log(f"Deleting the file after uploading to the google storage :: {upload_file_path}")
+                                delete_file(upload_file_path)
+                                log.log(f"Deleted the file after uploading to the google storage :: {upload_file_path}")
+                        else:
+                            log.log(f"{upload_file_path} exists, hence reading it.")
+                            with open(upload_file_path, "rb") as f:
+                                object = pkl.load(f)
+                            transformed_data = pd.DataFrame(object)
                     else:
+                        log.log(f"Blob with {blob_name} present in the cloud storage, so staring the download.")
+                        # downloading the file
+                        cloud_ops.download_file(upload_file_path) 
+                        log.log(f"Successfully downloaded the file.")
                         with open(upload_file_path, "rb") as f:
-                            object = pkl.load(f)
+                                object = pkl.load(f)
                         transformed_data = pd.DataFrame(object)
-
                 else:
-                    log.log(f"Blob with {blob_name} present in the cloud storage, so staring the download.")
-                    # downloading the file
-                    cloud_ops.download_file(upload_file_path) 
-                    log.log(f"Successfully downloaded the file.")
-                    with open(upload_file_path, "rb") as f:
+                    log.log(f"{file_name} is available at the local cache memory.")
+                    with open(file_path, "rb") as f:
                             object = pkl.load(f)
                     transformed_data = pd.DataFrame(object)
 
                 # Staring to check for duplicates for bulk uploaded questions.
                 log.log(f"Checking for bulk-question duplicates.")
-                if not type(questions) == np.ndarray:
-                    questions = np.array(questions) # converting the list of questions into array
+                if type(questions) != list:
+                    log.log("Questions are not in list format")
+                    questions = list(questions) # converting the list of questions into array
                 bulkupload = bulk_upload_questions(questions,transformed_data)
-                print("Filtering questions")
                 filtered_question = bulkupload.duplicate_questions()
-                print(filtered_question)
                 # Saving the filtred duplicate question table as html to render.
-                template = "templates"
-                file_name_html = "bulk-upload-dulicates.html"
-                path = os.path.join(template, file_name_html) # path to the html template.
+                if type(filtered_question) != str:
+                    template = "templates"
+                    file_name_html = "bulk-upload-dulicates.html"
+                    path = os.path.join(template, file_name_html) # path to the html template.
 
-                original_path = os.getcwd()
-                if not os.path.exists(path):
-                    log.log(f"{file_name_html} isn't present so saving it...")
-                    os.chdir(template)
-                    html_table = build_table(filtered_question, 'blue_light')
-                    with open(file_name_html, 'w',encoding="utf-8") as f:
-                        f.write(html_table)
-                    os.chdir(original_path)
-                    log.log(f"{file_name_html} saved successfully at {path}")
+                    original_path = os.getcwd()
+                    if not os.path.exists(path):
+                        log.log(f"{file_name_html} isn't present so saving it...")
+                        os.chdir(template)
+                        html_table = build_table(filtered_question, 'blue_light')
+                        with open(file_name_html, 'w',encoding="utf-8") as f:
+                            f.write(html_table)
+                        os.chdir(original_path)
+                        log.log(f"{file_name_html} saved successfully at {path}")
+                    else:
+                        log.log(f"creating new file at {path}...")
+                        os.chdir(template)
+                        delete_file(file_name_html)
+                        html_table = build_table(filtered_question, 'blue_light')
+                        with open(file_name_html, 'w',encoding="utf-8") as f:
+                            f.write(html_table)
+                        os.chdir(original_path)
+                        log.log(f"New file created successfully at {path}")
+                    return render_template("bulk-upload-dulicates.html")
                 else:
-                    log.log(f"creating new file at {path}...")
-                    os.chdir(template)
-                    delete_file(file_name_html)
-                    html_table = build_table(filtered_question, 'blue_light')
-                    with open(file_name_html, 'w',encoding="utf-8") as f:
-                        f.write(html_table)
-                    os.chdir(original_path)
-                    log.log(f"New file created successfully at {path}")
-                return render_template("bulk-upload-dulicates.html")
-
+                    return render_template("bulk_upload.html",result="No match found.")
             else:
                 log.log(f"{school_code} is not available.")
-                return render_template("bulk_upload.html")
+                return render_template("bulk_upload.html",result="No match found for entered school code.")       
         except Exception as e:
             log.log(f"Something went wrong :: {e}")
+            raise e
                 
 
 if __name__ == "__main__":
