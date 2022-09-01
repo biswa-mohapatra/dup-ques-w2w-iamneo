@@ -61,7 +61,13 @@
         </form>
 
         <form action="/bulk-upload" method="POST">
-            <input type="submit" class="btn btn-info" value= "Bulk Upload Question" name="Question Details" style="height:50px; width:200px">
+            <input type="submit" class="btn btn-info" value= "Bulk Upload Question" style="height:50px; width:200px">
+        </form>
+
+        <form action="/refresh" method="POST">
+            <h5 style="background-color:rgb(250, 247, 247);color:rgb(244, 12, 12)">This feature will delete all the old data in GCS.</h5>
+            <input type="submit" class="btn btn-info" value= "Refresh" style="height:50px; width:200px">
+            <h5 style="background-color:black;color:white">{{ refresh_output }}</h5>
         </form>
         <br>
         <br>

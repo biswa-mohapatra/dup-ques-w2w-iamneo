@@ -28,9 +28,9 @@ class duplicate_v1(object):
 
         Params: Authentication file path : str
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """    
     def __init__(self,auth_path):
         self.file_obj = open("questiion_duplicate_package.txt","a+")
@@ -45,9 +45,9 @@ class duplicate_v1(object):
 
         Params: None
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """ 
         try:
             start_time = time.time()
@@ -66,9 +66,9 @@ class duplicate_v1(object):
 
         Params: Query string
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """
         try:
             start_time = time.time()
@@ -76,21 +76,90 @@ class duplicate_v1(object):
             school_code = str(school_code)
             if school_code in school_code_list:
                 query = f"""
-                    SELECT
-                    *,
-                    (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
-                    FROM `examly-events.schema_testing_views.questions_dup_view` dup
-                    WHERE school_code = '{school_code}';
+                    WITH question_bank_schools as (
+                    select qbbd.qb_id, qbbd.school_id, s.school_code from `examly_warehouse_mysql_replica.question_bank_branch_department` qbbd
+                    left join `examly_warehouse_mysql_replica.schools` s
+                    on s.school_id = qbbd.school_id
+                    where qbbd.share = 0 and qbbd.deletedAt is null
+                    group by qbbd.qb_id, qbbd.school_id, s.school_code
+                    )
+
+                    select
+                    q.qb_id,
+                    q.q_id,
+                    q.question_data,
+                    q.manual_difficulty,
+                    q.question_type,
+                    q.imported,
+                    q.subject_id,
+                    q.topic_id,
+                    q.sub_topic_id,
+                    (select name from `examly_warehouse_mysql_replica.subject` s where subject_id = q.subject_id group by name) as subject,
+                    (select name from `examly_warehouse_mysql_replica.topic` where topic_id = q.topic_id group by name) as topic,
+                    (select name from `examly_warehouse_mysql_replica.sub_topic` where sub_topic_id = q.sub_topic_id group by name) as subtopic,
+                    qbs.school_id,
+                    qbs.school_code,
+                    q.createdAt as q_createdAt,
+                    q.updatedAt as q_updatedAt,
+                    q.deletedAt as q_deletedAt,
+                    qb.createdAt as qb_createdAt,
+                    qb.updatedAt as qb_updatedAt,
+                    qb.deletedAt as qb_deletedAt,
+                    mcq.options as mcq_questions_options,
+                    mcq.answer as mcq_questions_answer,
+                    qb.qb_name,
+                    from `examly_warehouse_mysql_replica.questions` q
+                    inner join `examly_warehouse_mysql_replica.question_banks` qb
+                    on qb.qb_id = q.qb_id
+                    inner join question_bank_schools qbs
+                    on qbs.qb_id = qb.qb_id
+                    and qbs.school_code IN ("{school_code}")
+                    left join `examly_warehouse_mysql_replica.mcq_questions` mcq
+                    on mcq.q_id = q.q_id
                     """
             else:
                 query = f"""
-                    SELECT
-                    *,
-                    (select qb_name from `examly-events.examly_warehouse_mysql_replica.question_banks` where qb_id = dup.qb_id) as qb_name
-                    FROM `examly-events.schema_testing_views.questions_dup_view` dup
-                    WHERE school_code = 'neowise';
+                    WITH question_bank_schools as (
+                    select qbbd.qb_id, qbbd.school_id, s.school_code from `examly_warehouse_mysql_replica.question_bank_branch_department` qbbd
+                    left join `examly_warehouse_mysql_replica.schools` s
+                    on s.school_id = qbbd.school_id
+                    where qbbd.share = 0 and qbbd.deletedAt is null
+                    group by qbbd.qb_id, qbbd.school_id, s.school_code
+                    )
+
+                    select
+                    q.qb_id,
+                    q.q_id,
+                    q.question_data,
+                    q.manual_difficulty,
+                    q.question_type,
+                    q.imported,
+                    q.subject_id,
+                    q.topic_id,
+                    q.sub_topic_id,
+                    (select name from `examly_warehouse_mysql_replica.subject` s where subject_id = q.subject_id group by name) as subject,
+                    (select name from `examly_warehouse_mysql_replica.topic` where topic_id = q.topic_id group by name) as topic,
+                    (select name from `examly_warehouse_mysql_replica.sub_topic` where sub_topic_id = q.sub_topic_id group by name) as subtopic,
+                    qbs.school_id,
+                    qbs.school_code,
+                    q.createdAt as q_createdAt,
+                    q.updatedAt as q_updatedAt,
+                    q.deletedAt as q_deletedAt,
+                    qb.createdAt as qb_createdAt,
+                    qb.updatedAt as qb_updatedAt,
+                    qb.deletedAt as qb_deletedAt,
+                    mcq.options as mcq_questions_options,
+                    mcq.answer as mcq_questions_answer,
+                    qb.qb_name,
+                    from `examly_warehouse_mysql_replica.questions` q
+                    inner join `examly_warehouse_mysql_replica.question_banks` qb
+                    on qb.qb_id = q.qb_id
+                    inner join question_bank_schools qbs
+                    on qbs.qb_id = qb.qb_id
+                    and qbs.school_code IN ("neowise")
+                    left join `examly_warehouse_mysql_replica.mcq_questions` mcq
+                    on mcq.q_id = q.q_id
                     """
-            #print(query)
             # Fetching the whole data
             client = bigquery.Client()
             whole_data = pandas_gbq.read_gbq(query, use_bqstorage_api=True,dialect="standard")
@@ -110,9 +179,9 @@ class duplicate_v1(object):
 
         Params: List of column names.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """
         return self.data.drop(columns,axis=1)
     
@@ -123,9 +192,9 @@ class duplicate_v1(object):
 
         Params: Data, Question type as string
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """
         return whole_data.iloc[np.where(whole_data["question_type"] == q_type)]
     
@@ -142,7 +211,7 @@ class duplicate_v1(object):
 
         Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
         """
         return data.insert(pos,col_name,value)
     
@@ -155,9 +224,9 @@ class duplicate_v1(object):
 
         Params: Data
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -190,9 +259,9 @@ class duplicate_v1(object):
 
         Params: Raw Html data.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -209,9 +278,9 @@ class duplicate_v1(object):
 
         Params: Data, Column Name : String
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -250,9 +319,9 @@ class duplicate_v1(object):
 
         Params: Data, col_name : The coloumn from which you want the cleaning to be happened.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -276,9 +345,9 @@ class duplicate_v1(object):
 
         Params: Data : Cleaned data.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -305,9 +374,9 @@ class duplicate_v1(object):
 
         Params: Data : Transformed data.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -334,9 +403,9 @@ class duplicate_v1(object):
 
         Params: Data : Filtered data. , Scentence : Question
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         return list(np.where(scentence == data["clean_question_data"][::1])[0])
@@ -349,9 +418,9 @@ class duplicate_v1(object):
 
         Params: Data : Filtered data. idx : Index of the duplicated data.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -381,9 +450,9 @@ class duplicate_v1(object):
 
         Params: Data : Cleaned answer data.
 
-        Author: Biswajit Mohapatra, Swati Kahar
+        Author: Biswajit Mohapatra
 
-        Version: 2.0
+        Version: 3.0
 
         """
         try:
@@ -392,7 +461,7 @@ class duplicate_v1(object):
             self.log.log(f"Ended fetching the duplicate data.")
             final_data = self.clean_answer_data(data,"cleaned_mcq_questions_options")
             final_data = ans_cleaned_data3.iloc[np.where(ans_cleaned_data3["duplicate"] == True)]
-            return final_data[["qb_id","q_id","clean_question_data","manual_difficulty","question_type","imported","subject_id","topic_id","createdAt","school_id","q_deletedAt","qb_deletedAt","school_code","cleaned_mcq_questions_options","qb_name","duplicate"]]
+            return final_data[["index","qb_id","q_id","clean_question_data","manual_difficulty","question_type","imported","subject","topic","subtopic","school_code","q_createdAt","q_updatedAt","q_deletedAt","cleaned_mcq_questions_options","qb_createdAt","qb_updatedAt","qb_deletedAt","qb_name","duplicate"]]
         except KeyError as k:
             self.log.log(f"Something went wrong at clesning the NaN data :: {k}")
             raise KeyError

@@ -92,7 +92,7 @@ class cloud_ops(object):
                 file_list = []
                 for i in bucket.client.list_blobs(bucket_name):
                     file_list.append(str(i).split(",")[1].strip())
-                return file_list
+            return file_list
         except ConnectionError as c:
             self.log.log(f"Something went wrong while trying to connect :: {c}")
         except Exception as e:
@@ -128,7 +128,39 @@ class cloud_ops(object):
         except ConnectionError as c:
             self.log.log(f"Something went wrong in estrablishing a connection :: {c}")
         except Exception as e:
-            self.log.log(f"Something went wrong in uploading file :: {e}")        
+            self.log.log(f"Something went wrong in uploading file :: {e}")  
+
+    def list_blobs(self)->list:
+        """
+        This function is responsible for returning all the blobs in the cloud storage
+        in the form of list.
+
+        Params : None
+
+        Exceptions: Raise an exception on error.
+
+        Author : Biswajit Mohapatra
+        """  
+
+        try:
+            # connecting to the cloud storage service
+            self.log.log(f"Connecting to cloud storage service")
+            self.connect_to_storage()
+            self.log.log(f"Connected to cloud storage service")
+
+            bucket_name = self.bucket_name
+
+            storage_client = storage.Client()
+            self.log.log(f"Collecting bucket with bucket name :: {bucket_name}")
+            bucket = storage_client.bucket(bucket_name)
+            blob_list = [blob.name for blob in bucket.list_blobs()]
+            return blob_list
+        except ConnectionError as c:
+            self.log.log(f"Something went wrong in collecting the blobs :: {c}")
+            raise ConnectionError
+        except Exception as e:
+            self.log.log(f"Something went wrong in collecting the blobs :: {e}")
+            raise Exception
     
     def download_file(self,download_path:str):
         """
@@ -168,4 +200,43 @@ class cloud_ops(object):
             self.log.log(f"Something went wrong in downloading the file :: {e}")
     
 
+    def delete_cloud_cache(self,bucket_name, blob_name):
+        """
+        This function is responsible for deleting blobs in the cloud storage
+        with bucket name as bucket_name and blob name as blob_name.
         
+        Params:
+            bucket_name : string
+            blob_name : string -> object name
+        Exceptions: Raise error on failure.
+
+        Author: Biswajit Mohapatra 
+
+        Version : 3.0
+        """
+        try:
+
+            # connecting to the cloud storage service
+            self.log.log(f"Connecting to cloud storage service")
+            self.connect_to_storage()
+            self.log.log(f"Connected to cloud storage service")
+
+            storage_client = storage.Client()
+
+            self.log.log(f"Collecting thee bucket name.")
+            bucket = storage_client.bucket(bucket_name)
+            self.log.log(f"Collecting the blob name.")
+            blob = bucket.blob(blob_name)
+            
+            self.log.log(f"Deleting the blob {blob_name}.")
+            blob.delete()
+            self.log.log(f"Deleted the blob {blob_name}.")
+        except ValueError as v:
+            self.log.log(f"Something went wrong while deleting the files from the cloud :: {v}")
+            raise ValueError
+        except ConnectionError as c:
+            self.log.log(f"Something went wrong while deleting the files from the cloud :: {c}")
+            raise ConnectionError
+        except Exception as e:
+            self.log.log(f"Something went wrong while deleting the files from the cloud :: {e}")
+            raise Exception

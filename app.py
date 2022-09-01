@@ -8,6 +8,7 @@ Author: Biswajit Mohapatra
 
 # Importing all the dependencies...
 import os
+from flask.templating import render_template_string
 import pandas as pd
 import numpy as np
 import pickle as pkl
@@ -65,7 +66,7 @@ def main():
                 # file path to pass for cloud operations.
                 upload_file_path = os.path.join(local_dir, file_name) 
                 cloud_ops = cloud_operations.cloud_ops(bucket_auth,blob_name,bucket_name,upload_file_path)
-                fileNames_recived = cloud_ops.check_for_blob_presence()
+                fileNames_recived = cloud_ops.list_blobs()
                 
                 # calling the question duplicate package.
                 duplicate = duplicate_v1(auth_path)
@@ -261,10 +262,14 @@ def question_details_bulk_upload():
     if request.method == "POST":
         try:
             log.log(f"\n\n********************************Duplicate question check for bulk upload.*******************************************\n")
-            ques = request.form.get("BulkQuestion")
+            question = request.form.get("BulkQuestion")
             school_code = request.form.get("SchoolCode")
-            questions = []
-            questions.append(ques)
+            log.log("Sending the raw questions to prepare.")
+            questions = data_prep.question_prepare(question)
+            if type(question) != list:
+                questions = []
+                questions.append(question)
+            log.log("Prepared the questions successfully.")
             config = read_yaml("config.yaml")
             local_dir = config["GET_DATA"]["local_dir"]
             auth_path = config["GET_DATA"]["auth_json_path"]
@@ -410,6 +415,50 @@ def question_details_bulk_upload():
         except Exception as e:
             log.log(f"Something went wrong :: {e}")
             raise e
+
+@app.route("/refresh", methods = ["GET", "POST"])
+@cross_origin()
+def refresh():
+    """
+    This function is responsible for deleting all the cache files in the GCS.
+    """
+    if request.method == "POST":
+        try:
+            log.log(f"\n\n********************************\tRefresh\t*******************************************\n")
+            config = read_yaml("config.yaml")
+            bucket_auth = config["GET_DATA"]["bucket_auth"]
+            bucket_name = config["GET_DATA"]["bucket_name"]
+
+            # Cheking the local cache memory:
+            log.log(f"Clearing cache from local cache memory.")
+            PATH = "data/"
+            if os.path.exists(PATH):
+                if len(os.listdir(PATH)) > 0:
+                    files = os.listdir(PATH)
+                    for file in files:
+                        file_path = os.path.join(PATH,file)
+                        log.log(f"{file} deleted from local directory.")
+                        delete_file(file_path)
+            log.log(f"Cleared all cache from local cache memory.")
+
+            # Clearing all cache from cloud storage:
+            log.log(f"Starting collection of blobs.")
+            cloud_ops = cloud_operations.cloud_ops(bucket_auth=bucket_auth,blob_name=None,bucket_name=bucket_name,file_path=None)
+            blob_list = cloud_ops.list_blobs()
+            if len(blob_list) > 0:
+                log.log(f"Collected all the blobs.")
+                for blob_name in blob_list:
+                    log.log(f"Deleting blob :: {blob_name}")
+                    cloud_ops.delete_cloud_cache(bucket_name, blob_name)
+                    log.log(f"Deleted blob :: {blob_name}")
+                log.log(f"All the blobs from  bucket :: {bucket_name} are deleted.")
+
+                return render_template("home.html",refresh_output = "All old records are deleted.")
+            else:
+                return render_template("home.html",refresh_output = "All old records are deleted.")
+        except Exception as e:
+            log.log(f"Error while refreshing the data :: {e}")
+            raise Exception
                 
 
 if __name__ == "__main__":

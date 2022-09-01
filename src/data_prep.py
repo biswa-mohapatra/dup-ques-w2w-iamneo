@@ -6,6 +6,7 @@ preparation of the data.
 from application_logger.logging import App_Logger
 import pandas as pd
 import numpy as np
+import nltk.data
 
 def prepare_data(data):
     """
@@ -52,4 +53,29 @@ def prepare_data(data):
         raise IndexError
     except Exception as e:
         log.log(f"Something went wrong at clesning the data :: {e}")
+        raise Exception
+
+def question_prepare(questions:str)->list:
+    """
+    A coustom function to prepare the data that will further fed for preprocessing.
+
+    Params: Raw questions
+    Returns: Prepared questions -> List
+
+    Exceptions:
+
+    Author: Biswajit Mohapatra
+
+    Version: 2.0
+    """
+    try:
+        file_obj =open("data_prep.txt","a+")
+        log = App_Logger(file_obj)
+        log.log(f"\n----------------Starting Question preparation---------------\n")
+        log.log("Tokenizing the data.")
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        log.log("Questions got tokenized successfully.")
+        return '\n'.join(tokenizer.tokenize(questions)).split('\n')
+    except Exception as e:
+        log.log(f"Something went wrong while preparing questions :: {e}")
         raise Exception

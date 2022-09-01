@@ -40,7 +40,7 @@ class bulk_upload_questions(object):
             self.log.log(f"Starting the question duplicate check for bulk upload questions.")
             start_time = time.time()
             #self.questions = list(self.questions)
-            print(self.questions)
+            #print(self.questions)
             questions_dataframe = pd.DataFrame(data=self.questions,index=range(len(self.questions)),columns=["Questions"])
             common_questions = pd.merge(left=self.transformed_data["clean_question_data"],right=questions_dataframe,how='inner',left_on="clean_question_data",right_on="Questions",copy=False)
             if common_questions.shape[0] > 0:
